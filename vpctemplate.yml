@@ -29,6 +29,6 @@ Resources:
      VpcId: !Ref CentralVPC
  
 Outputs:
-  India:
+  CentralVPC:
    Description: A ref to created VPC 
    Value: !Ref CentralVPC
