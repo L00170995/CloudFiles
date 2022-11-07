@@ -1,0 +1,22 @@
+#creating VPC with name CentralVPC
+Resources:
+  CentralVPC:
+    Type: AWS::EC2::VPC
+    Properties: 
+      CidrBlock: 10.0.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      InstanceTenancy: default
+      
+# Creating IGW with name MaingGW
+  MainGW:
+    Type: AWS::EC2::InternetGateway
+    DependsOn: VPC
+         
+# Connecting VPC to MainGW
+  VPCConnect:
+   Type: AWS::EC2::VPCGatewayAttachment
+   Properties:
+     InternetGatewayId: !Ref MainGW
+     VpcId: !Ref CentralVPC
+
