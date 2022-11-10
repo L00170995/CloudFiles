@@ -34,15 +34,44 @@ Resources:
       CidrBlock: 10.0.4.0/24
       VpcId: !Ref CVPC
       #AvailablityZone: "us-east-1"
+  Psecurtygroup:  #security group for public subnet jumbbox instance        
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      VpcId: !Ref CVPC
+      GroupDescription: Allow access from HTTP and SSH traffic
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: !Ref SSHLocation
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
 
+  Prsecuritygroup:   #security group for ec2 instances       
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      VpcId: !Ref CVPC
+      GroupDescription: Allow access from HTTP and SSH traffic
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: !Ref SSHLocation
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+          
   Jumbbox:        #creating a jumbbox 
     Type: 'AWS::EC2::Instance'
     Properties:
       InstanceType: !Ref InstanceType
       ImageId: ami-09d3b3274b6c5d4aa
       SubnetId: !Ref PrivateSubnet
-      #SecurityGroupIds:
-       # - !Ref AppInstanceSecurityGroup
+      SecurityGroupIds:
+        - !Ref Psecurtygroup
       Tags:
         - Key: Name
           Value: jumbbox
@@ -70,3 +99,5 @@ Resources:
       Tags:
         - Key: Name
           Value: EC2-private       
+
+  
