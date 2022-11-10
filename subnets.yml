@@ -1,0 +1,72 @@
+Parameters:
+  InstanceType: 
+    Description: Ec2 instance
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - t2.micro
+    ConstraintDescription: t2.micro instance are allowed.
+Resources: 
+  PublicSubnet:     #public subnet for us-east
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: 10.0.1.0/24
+      VpcId: !Ref CPVC
+     # AvailabiltyZone: "us-east-1"
+  
+  PrivateSubnet:      #private subnet for us-east-1
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: 10.0.2.0/24
+      VpcId: !Ref CVPC
+      #AvailablityZone: "us-east-1"
+
+  PublicSubnet1:      #public subnet for us-east-2    
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: 10.0.3.0/24
+      VpcId: !Ref CVPC
+     # AvailablityZone: "us-east-1"
+
+  PrivateSubnet1:      #private subnet for us-east-2    
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: 10.0.4.0/24
+      VpcId: !Ref CVPC
+      #AvailablityZone: "us-east-1"
+
+  Jumbbox:        #creating a jumbbox 
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: ami-09d3b3274b6c5d4aa
+      SubnetId: !Ref PrivateSubnet
+      #SecurityGroupIds:
+       # - !Ref AppInstanceSecurityGroup
+      Tags:
+        - Key: Name
+          Value: jumbbox
+
+  PublicInstance:      #Ec2instance for Public-Subnet  
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: ami-09d3b3274b6c5d4aa
+      SubnetId: !Ref PublicSubnet
+      #SecurityGroupIds:
+        #- !Ref AppInstanceSecurityGroup
+      Tags:
+        - Key: Name
+          Value: EC2-public        
+
+  PrivateInstance:     #Ec2 instance for Private-Subnet
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: ami-09d3b3274b6c5d4aa
+      SubnetId: !Ref PrivateSubnet
+      #SecurityGroupIds:
+        #- !Ref AppInstanceSecurityGroup
+      Tags:
+        - Key: Name
+          Value: EC2-private       
