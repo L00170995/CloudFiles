@@ -5,7 +5,7 @@ Parameters:
 
   
 Resources:    
-  CentralVPC:    #creating VPC by the name of CentralVPC    
+  CentralVPC:    #creating VPC by the name of India     
     Type: AWS::EC2::VPC
     Properties: 
       CidrBlock: !Ref VPCCidrBlock
@@ -13,7 +13,7 @@ Resources:
       EnableDnsSupport: true
       Tags:
         - Key: VPCId
-          Value: CentralVPC
+          Value: India
 
   MainGW:         # Creating IGW by the name of MainGW
     Type: AWS::EC2::InternetGateway
@@ -29,6 +29,14 @@ Resources:
      VpcId: !Ref CentralVPC
  
 Outputs:
-  CentralVPC:
-   Description: A ref to created VPC 
+  CVPC:
+   Description: A reference to  VPC 
    Value: !Ref CentralVPC
+  
+  MGW:
+   Description: A ref to MainGW 
+   Value: !Ref MainGW
+
+  AGW:
+   Description: A reference to VPCattachIGW 
+   Value: !Ref VPCattachIGW
