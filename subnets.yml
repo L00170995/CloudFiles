@@ -7,37 +7,52 @@ Parameters:
       - t2.micro
     ConstraintDescription: t2.micro instance are allowed.
 Resources: 
-  PublicSubnet:     #public subnet for us-east
+  PublicSubnet:     #public subnet for us-east(jumbox)
     Type: 'AWS::EC2::Subnet'
     Properties:
       CidrBlock: 10.0.1.0/24
-      VpcId: !Ref CPVC
+      VpcId: !Ref CentralVPC
+      MapPublicIpOnLaunch: true
      # AvailabiltyZone: "us-east-1"
   
   PrivateSubnet:      #private subnet for us-east-1
     Type: 'AWS::EC2::Subnet'
     Properties:
       CidrBlock: 10.0.2.0/24
-      VpcId: !Ref CVPC
+      VpcId: !Ref CentralVPC
       #AvailablityZone: "us-east-1"
 
-  PublicSubnet1:      #public subnet for us-east-2    
-    Type: 'AWS::EC2::Subnet'
-    Properties:
-      CidrBlock: 10.0.3.0/24
-      VpcId: !Ref CVPC
-     # AvailablityZone: "us-east-1"
+ # PublicSubnet1:      #public subnet for us-east-2    
+   # Type: 'AWS::EC2::Subnet'
+    #Properties:
+     # CidrBlock: 10.0.3.0/24
+      #VpcId: !Ref CentralVPC
+     # AvailablityZone: "us-east-1" 
 
-  PrivateSubnet1:      #private subnet for us-east-2    
-    Type: 'AWS::EC2::Subnet'
-    Properties:
-      CidrBlock: 10.0.4.0/24
-      VpcId: !Ref CVPC
+  #PrivateSubnet1:      #private subnet for us-east-2    
+   # Type: 'AWS::EC2::Subnet'
+    #Properties:
+     # CidrBlock: 10.0.4.0/24
+      #VpcId: !Ref CentralVPC
       #AvailablityZone: "us-east-1"
-  Psecurtygroup:  #security group for public subnet jumbbox instance        
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: Public
+  PublicRoute1:   # Public route table has direct routing to IGW:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+  Psecuritygroup:  #security group for public subnet jumbbox instance        
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
-      VpcId: !Ref CVPC
+      VpcId: !Ref CentralVPC
       GroupDescription: Allow access from HTTP and SSH traffic
       SecurityGroupIngress:
         - IpProtocol: tcp
@@ -52,29 +67,33 @@ Resources:
   Prsecuritygroup:   #security group for ec2 instances       
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
-      VpcId: !Ref CVPC
+      VpcId: !Ref CentralVPC
       GroupDescription: Allow access from HTTP and SSH traffic
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: '22'
           ToPort: '22'
-          CidrIp: !Ref SSHLocation
+          CidrIp: !Ref TCPLocation
         - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
-          CidrIp: 0.0.0.0/0
+          CidrIp: TCPLocation
           
   Jumbbox:        #creating a jumbbox 
     Type: 'AWS::EC2::Instance'
     Properties:
       InstanceType: !Ref InstanceType
       ImageId: ami-09d3b3274b6c5d4aa
-      SubnetId: !Ref PrivateSubnet
-      SecurityGroupIds:
-        - !Ref Psecurtygroup
+      KeyName: !Ref KeyName
       Tags:
         - Key: Name
           Value: jumbbox
+      NetworkInterfaces: 
+      - AssociatePublicIpAddress: "true"
+        DeviceIndex: "0"
+        SubnetId: !Ref PublicSubnet
+        GroupSet: 
+          - !Ref Psecuritygroup
 
   PublicInstance:      #Ec2instance for Public-Subnet  
     Type: 'AWS::EC2::Instance'
@@ -82,8 +101,8 @@ Resources:
       InstanceType: !Ref InstanceType
       ImageId: ami-09d3b3274b6c5d4aa
       SubnetId: !Ref PublicSubnet
-      #SecurityGroupIds:
-        #- !Ref AppInstanceSecurityGroup
+      SecurityGroupIds:
+        - !Ref Prsecuritygroup
       Tags:
         - Key: Name
           Value: EC2-public        
@@ -94,10 +113,45 @@ Resources:
       InstanceType: !Ref InstanceType
       ImageId: ami-09d3b3274b6c5d4aa
       SubnetId: !Ref PrivateSubnet
-      #SecurityGroupIds:
-        #- !Ref AppInstanceSecurityGroup
+      SecurityGroupIds:
+        - !Ref Prsecuritygroup
       Tags:
         - Key: Name
-          Value: EC2-private       
+          Value: EC2-private
 
-  
+                          #Outbound rule for private ec2. To connect between app and jumpbox
+  OutboundRuleApp:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      IpProtocol: tcp
+      FromPort: 0
+      ToPort: 65535
+      DestinationSecurityGroupId: !GetAtt Psecuritygroup.GroupId
+      GroupId: !GetAtt Precuritygroup.GroupId
+                          #Inbound rule for private ec2. To connect between app and jumpbox
+  InboundRuleApp:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      FromPort: 0
+      ToPort: 65535
+      SourceSecurityGroupId: !GetAtt Psecurity.GroupId
+      GroupId: !GetAtt Prsecuritygroup.GroupId
+                         #Outbound rule for Jump Box Server. To connect between app and jumpbox
+  OutboundRuleJump:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      IpProtocol: tcp
+      FromPort: 0
+      ToPort: 65535
+      DestinationSecurityGroupId: !GetAtt Precuritygroup.GroupId
+      GroupId: !GetAtt Psecuritygroup.GroupId
+                         #Inbound rule for Jump Box Server. To connect between app and jumpbox
+  InboundRuleJump:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      FromPort: 0
+      ToPort: 65535
+      SourceSecurityGroupId: !GetAtt Precuritygroup.GroupId
+      GroupId: !GetAtt Psecuritygroup.GroupId
