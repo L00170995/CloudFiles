@@ -5,7 +5,7 @@ Parameters:
 
   
 Resources:    
-  CentralVPC:    #creating VPC by the name of India     
+  CentralVPC:    #creating VPC by the name of CentralVPC     
     Type: AWS::EC2::VPC
     Properties: 
       CidrBlock: !Ref VPCCidrBlock
