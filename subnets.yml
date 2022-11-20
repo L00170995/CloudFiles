@@ -1,35 +1,31 @@
-Parameters:
-  InstanceType: 
-    Description: Ec2 instance
-    Type: String
-    Default: t2.micro
-    AllowedValues:
-      - t2.micro
-    ConstraintDescription: t2.micro instance are allowed.
 Resources: 
-  PublicSubnet:     #public subnet for us-east(jumbox)
+  PublicSubnet0:     #public subnet for us-east(jumbox)
     Type: 'AWS::EC2::Subnet'
     Properties:
       CidrBlock: 10.0.1.0/24
       VpcId: 
-        Fn::ImportValue: CVPC
+        Fn::ImportValue: VPCId
       MapPublicIpOnLaunch: true
-     # AvailabiltyZone: "us-east-1"
+      AvailabilityZone: !Select 
+        - 0
+        - Fn::GetAZs: !Ref 'AWS::Region'
   
-  PrivateSubnet:      #private subnet for us-east-1
+  PrivateSubnet0:      #private subnet for us-east-1
     Type: 'AWS::EC2::Subnet'
     Properties:
       CidrBlock: 10.0.2.0/24
       VpcId: 
-        Fn::ImportValue: CVPC
-      #AvailablityZone: "us-east-1"
+        Fn::ImportValue: VPCId
+      AvailabilityZone: !Select 
+        - 1
+        - Fn::GetAZs: !Ref 'AWS::Region'
 
  # PublicSubnet1:      #public subnet for us-east-2    
    # Type: 'AWS::EC2::Subnet'
     #Properties:
      # CidrBlock: 10.0.3.0/24
       #1: 
-        Fn::ImportValue: CVPC
+       # Fn::ImportValue: CVPC
      # AvailablityZone: "us-east-1" 
 
   #PrivateSubnet1:      #private subnet for us-east-2    
@@ -37,19 +33,18 @@ Resources:
     #Properties:
      # CidrBlock: 10.0.4.0/24
       #1: 
-        Fn::ImportValue: CVPC
+       # Fn::ImportValue: CVPC
       #AvailablityZone: "us-east-1"
   PublicRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: 
-        Fn::ImportValue: CVPC
+        Fn::ImportValue: VPCId
       Tags:
       - Key: Name
         Value: Public
   PublicRoute1:   # Public route table has direct routing to IGW:
     Type: AWS::EC2::Route
-    DependsOn: !Ref AGW
     Properties:
       RouteTableId: !Ref PublicRouteTable
       DestinationCidrBlock: 0.0.0.0/0
@@ -59,113 +54,29 @@ Resources:
   mySubnetRouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      SubnetId: !Ref PublicSubnet
+      SubnetId: !Ref PublicSubnet0
       RouteTableId: !Ref PublicRouteTable    
-  Psecuritygroup:  #security group for public subnet jumbbox instance        
-    Type: 'AWS::EC2::SecurityGroup'
-    Properties:
-      VpcId: 
-        Fn::ImportValue: CVPC
-      GroupDescription: Allow access from HTTP and SSH traffic
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: '22'
-          ToPort: '22'
-          CidrIp: !Ref SSHLocation
-        - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
-          CidrIp: 0.0.0.0/0
-
-  Prsecuritygroup:   #security group for ec2 instances       
-    Type: 'AWS::EC2::SecurityGroup'
-    Properties:
-      VpcId: 
-        Fn::ImportValue: CVPC
-      GroupDescription: Allow access from HTTP and SSH traffic
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: '22'
-          ToPort: '22'
-          CidrIp: !Ref TCPLocation
-        - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
-          CidrIp: TCPLocation
-          
-  Jumbbox:            #jumbbox instance
-    Type: 'AWS::EC2::Instance'
-    Properties:
-      InstanceType: !Ref InstanceType
-      ImageId: ami-09d3b3274b6c5d4aa
-      KeyName: !Ref KeyName
-      Tags:
-        - Key: Name
-          Value: jumbbox
-      NetworkInterfaces: 
-      - AssociatePublicIpAddress: "true"
-        DeviceIndex: "0" 
-        SubnetId: !Ref PublicSubnet
-        GroupSet: 
-          - !Ref Psecuritygroup
-
-  PublicInstance:       #Ec2instance for Public-Subnet  
-    Type: 'AWS::EC2::Instance'
-    Properties:
-      InstanceType: !Ref InstanceType
-      ImageId: ami-09d3b3274b6c5d4aa
-      SubnetId: !Ref PublicSubnet
-      SecurityGroupIds:
-        - !Ref Prsecuritygroup
-      Tags:
-        - Key: Name
-          Value: EC2-public        
-
-  PrivateInstance:      #Ec2 instance for Private-Subnet
-    Type: 'AWS::EC2::Instance'
-    Properties:
-      InstanceType: !Ref InstanceType
-      ImageId: ami-09d3b3274b6c5d4aa
-      SubnetId: !Ref PrivateSubnet
-      SecurityGroupIds:
-        - !Ref Prsecuritygroup
-      Tags:
-        - Key: Name
-          Value: EC2-private
-
-                          
-  OutboundRuleApp:       #Outbound rule for private ec2. To connect between app and jumpbox
-    Type: AWS::EC2::SecurityGroupEgress
-    Properties:
-      IpProtocol: tcp
-      FromPort: 0
-      ToPort: 65535
-      DestinationSecurityGroupId: !GetAtt Psecuritygroup.GroupId
-      GroupId: !GetAtt Precuritygroup.GroupId
-                          
-  InboundRuleApp:        #Inbound rule for private ec2. To connect between app and jumpbox
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      IpProtocol: tcp
-      FromPort: 0
-      ToPort: 65535
-      SourceSecurityGroupId: !GetAtt Psecurity.GroupId
-      GroupId: !GetAtt Prsecuritygroup.GroupId
-                        
-  OutboundRuleJump:       #Outbound rule for Jump Box Server. To connect between app and jumpbox
-    Type: AWS::EC2::SecurityGroupEgress
-    Properties:
-      IpProtocol: tcp
-      FromPort: 0
-      ToPort: 65535
-      DestinationSecurityGroupId: !GetAtt Precuritygroup.GroupId
-      GroupId: !GetAtt Psecuritygroup.GroupId
-                         
-  InboundRuleJump:       #Inbound rule for Jump Box Server. To connect between app and jumpbox
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      IpProtocol: tcp
-      FromPort: 0
-      ToPort: 65535
-      SourceSecurityGroupId: !GetAtt Precuritygroup.GroupId
-      GroupId: !GetAtt Psecuritygroup.GroupId
+  
+Outputs:
+  PublicSubnet0:
+    Description: Public Subnet 0
+    Value: !Ref PublicSubnet0
+    Export:
+      Name: PublicSubnet0
+    
+  PrivateSubnet0:
+    Description: Public Subnet 0
+    Value: !Ref PrivateSubnet0
+    Export:
+      Name: PrivateSubnet0
+    
+  # PublicSubnet1:
+  #   Description: Private Subnet 1
+  #   Export:
+  #     Name: PublicSubnet1
+  #   Value: !Ref PublicSubnet1
+  # Privatesubnet1:
+  #   Description: Private Subnet 1
+  #   Export:
+  #     Name: Privatesubnet1
+  #   Value: !Ref Privatesubnet1

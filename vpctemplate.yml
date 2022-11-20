@@ -13,7 +13,7 @@ Resources:
       EnableDnsSupport: true
       Tags:
         - Key: VPCId
-          Value: India
+          Value: CentralVPC
 
   MainGW:         # Creating IGW by the name of MainGW
     Type: AWS::EC2::InternetGateway
@@ -32,11 +32,21 @@ Outputs:
   CVPC:
    Description: A reference to  VPC 
    Value: !Ref CentralVPC
+   Export:
+     Name: VPCId
+     
   
   MGW:
-   Description: A ref to MainGW 
-   Value: !Ref MainGW
+   Description: A ref to MainGW
+   Value: !Ref MainGW 
+   Export:
+     Name: GId
+     Value: !Ref MainGW 
 
   AGW:
    Description: A reference to VPCattachIGW 
    Value: !Ref VPCattachIGW
+   Export:
+     Name: AGWId
+     
+  
