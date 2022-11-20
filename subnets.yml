@@ -10,7 +10,7 @@ Resources:
         - 0
         - Fn::GetAZs: !Ref 'AWS::Region'
   
-  PrivateSubnet0:      #private subnet for us-east-1
+  PrivateSubnet0:      #private subnet 
     Type: 'AWS::EC2::Subnet'
     Properties:
       CidrBlock: 10.0.2.0/24
@@ -20,21 +20,27 @@ Resources:
         - 1
         - Fn::GetAZs: !Ref 'AWS::Region'
 
- # PublicSubnet1:      #public subnet for us-east-2    
-   # Type: 'AWS::EC2::Subnet'
-    #Properties:
-     # CidrBlock: 10.0.3.0/24
-      #1: 
-       # Fn::ImportValue: CVPC
-     # AvailablityZone: "us-east-1" 
+  PrivateSubnet1:      #private subnet 
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: 10.0.3.0/24
+      VpcId: 
+        Fn::ImportValue: VPCId
+      AvailabilityZone: !Select 
+        - 2
+        - Fn::GetAZs: !Ref 'AWS::Region'
 
-  #PrivateSubnet1:      #private subnet for us-east-2    
-   # Type: 'AWS::EC2::Subnet'
-    #Properties:
-     # CidrBlock: 10.0.4.0/24
-      #1: 
-       # Fn::ImportValue: CVPC
-      #AvailablityZone: "us-east-1"
+  PublicSubnet1:     #public subnet for front facing server
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: 10.0.4.0/24
+      VpcId: 
+        Fn::ImportValue: VPCId
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: !Select 
+        - 0
+        - Fn::GetAZs: !Ref 'AWS::Region'
+  
   PublicRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
@@ -57,6 +63,25 @@ Resources:
       SubnetId: !Ref PublicSubnet0
       RouteTableId: !Ref PublicRouteTable    
   
+  RDSDBInstanceSubnet1:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: 10.0.4.0/24
+      VpcId: 
+        Fn::ImportValue: VPCId
+      AvailabilityZone: !Select 
+        - 0
+        - Fn::GetAZs: !Ref 'AWS::Region'
+  RDSDBInstanceSubnet2:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: 10.0.5.0/24
+      VpcId: 
+        Fn::ImportValue: VPCId
+      AvailabilityZone: !Select 
+        - 1
+        - Fn::GetAZs: !Ref 'AWS::Region'
+
 Outputs:
   PublicSubnet0:
     Description: Public Subnet 0
@@ -69,14 +94,18 @@ Outputs:
     Value: !Ref PrivateSubnet0
     Export:
       Name: PrivateSubnet0
+
+
+  PrivateSubnet1:
+    Description: Public Subnet 0
+    Value: !Ref PrivateSubnet1
+    Export:
+      Name: PrivateSubnet1
+
+
+  PublicSubnet1:
+    Description: Public Subnet 1
+    Value: !Ref PublicSubnet1
+    Export:
+      Name: PublicSubnet1
     
-  # PublicSubnet1:
-  #   Description: Private Subnet 1
-  #   Export:
-  #     Name: PublicSubnet1
-  #   Value: !Ref PublicSubnet1
-  # Privatesubnet1:
-  #   Description: Private Subnet 1
-  #   Export:
-  #     Name: Privatesubnet1
-  #   Value: !Ref Privatesubnet1

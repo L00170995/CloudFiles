@@ -46,7 +46,7 @@ Mappings:     # need to update ami
     production:
       InstanceType: t2.small
 Resources:
-  Psecuritygroup:  #security group for public subnet jumbbox instance        
+  Publicsecuritygroup:  #security group for public subnet jumbbox instance        
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
       VpcId: 
@@ -61,8 +61,46 @@ Resources:
           FromPort: 80
           ToPort: 80
           CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 10.0.2.0/24
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 10.0.3.0/24
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 10.0.3.0/24
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 10.0.4.0/24
 
-  Prsecuritygroup:   #security group for ec2 instances       
+  Privatesecuritygroup:   #security group for ec2 instances       
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      VpcId: 
+        Fn::ImportValue: VPCId
+      GroupDescription: Allow access from HTTP and SSH traffic
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref TCPLocation
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: !Ref TCPLocation
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref TCPLocation
+
+  Privatesecuritygroup1:   #security group for ec2 instances       
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
       VpcId: 
@@ -76,6 +114,32 @@ Resources:
         - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
+          CidrIp: !Ref TCPLocation
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref TCPLocation
+ 
+  Publicsecuritygroup1:   #security group for ec2 instances       
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      VpcId: 
+        Fn::ImportValue: VPCId
+      GroupDescription: Allow access from HTTP and SSH traffic
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: !Ref TCPLocation
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: !Ref TCPLocation
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
           CidrIp: !Ref TCPLocation
           
   Jumbbox:            #jumbbox instance
@@ -93,16 +157,17 @@ Resources:
         SubnetId:
           Fn::ImportValue: PublicSubnet0 
         GroupSet: 
-          - !Ref Psecuritygroup
+          - !Ref Publicsecuritygroup
 
   PublicInstance:       #Ec2instance for Public-Subnet  
     Type: 'AWS::EC2::Instance'
     Properties:
       ImageId: !Ref Dynamicamiid
       InstanceType: !FindInMap [EnvironmentToInstanceType, !Ref 'EnvironmentName', InstanceType]
-      SubnetId: !ImportValue PublicSubnet0
+      SubnetId: !ImportValue PublicSubnet1
+      KeyName: !Ref KeyName
       SecurityGroupIds:
-        - !Ref Prsecuritygroup
+        - !Ref Publicsecuritygroup1
       Tags:
         - Key: Name
           Value: EC2-public        
@@ -112,46 +177,23 @@ Resources:
     Properties:
       InstanceType: !Ref InstanceType
       ImageId: !Ref Dynamicamiid
+      KeyName: !Ref KeyName
       SubnetId: !ImportValue PrivateSubnet0
       SecurityGroupIds:
-        - !Ref Prsecuritygroup
+        - !Ref Privatesecuritygroup
       Tags:
         - Key: Name
           Value: EC2-private
 
-                          
-  OutboundRuleApp:       #Outbound rule for private ec2. To connect between app and jumpbox
-    Type: AWS::EC2::SecurityGroupEgress
+  PrivateInstance1:      #Ec2 instance for Private-Subnet1
+    Type: 'AWS::EC2::Instance'
     Properties:
-      IpProtocol: tcp
-      FromPort: 0
-      ToPort: 65535
-      DestinationSecurityGroupId: !GetAtt Psecuritygroup.GroupId
-      GroupId: !GetAtt Prsecuritygroup.GroupId
-                          
-  InboundRuleApp:        #Inbound rule for private ec2. To connect between app and jumpbox
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      IpProtocol: tcp
-      FromPort: 0
-      ToPort: 65535
-      SourceSecurityGroupId: !GetAtt Psecuritygroup.GroupId
-      GroupId: !GetAtt Prsecuritygroup.GroupId
-                        
-  OutboundRuleJump:       #Outbound rule for Jump Box Server. To connect between app and jumpbox
-    Type: AWS::EC2::SecurityGroupEgress
-    Properties:
-      IpProtocol: tcp
-      FromPort: 0
-      ToPort: 65535
-      DestinationSecurityGroupId: !GetAtt Prsecuritygroup.GroupId
-      GroupId: !GetAtt Psecuritygroup.GroupId
-                         
-  InboundRuleJump:       #Inbound rule for Jump Box Server. To connect between app and jumpbox
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      IpProtocol: tcp
-      FromPort: 0
-      ToPort: 65535
-      SourceSecurityGroupId: !GetAtt Prsecuritygroup.GroupId
-      GroupId: !GetAtt Psecuritygroup.GroupId
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyName
+      ImageId: !Ref Dynamicamiid
+      SubnetId: !ImportValue PrivateSubnet1
+      SecurityGroupIds:
+        - !Ref Privatesecuritygroup1
+      Tags:
+        - Key: Name
+          Value: EC2-private1
