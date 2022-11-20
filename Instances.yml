@@ -7,8 +7,8 @@ Parameters:
       - t2.micro
     ConstraintDescription: t2.micro instance are allowed.
 
-  SSHLocation:
-    Description: ' The IP address range that can be used to access the web server using SSH.'
+  PubilcIPRange:
+    Description: ' The IP address range that can be used to access the web server.'
     Type: String
     MinLength: '9'
     MaxLength: '18'
@@ -16,7 +16,7 @@ Parameters:
     AllowedPattern: '(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})'
     ConstraintDescription: Must be a valid IP CIDR range of the form x.x.x.x/x.
 
-  TCPLocation:
+  JumpboxCIDR:
     Description: ' The IP address range that can be used to access the web server using TCP from JumpBox.'
     Type: String
     MinLength: '9'
@@ -27,19 +27,19 @@ Parameters:
   KeyName:
     Description: Name of an existing EC2 KeyPair to enable SSH access to the instance.
     Type: 'AWS::EC2::KeyPair::KeyName'
-    ConstraintDescription: must be the name of an existing EC2 KeyPair.
+    ConstraintDescription: Must be an existing EC2 KeyPair.
 
   EnvironmentName:
     Description: Environment Name
     Type: String
     AllowedValues: [development, production]
-    ConstraintDescription: must be development or production
+    ConstraintDescription: Environment must be development or production
 
   Dynamicamiid:    #to dynamically assign ami id
     Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
     Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
 
-Mappings:     # need to update ami
+Mappings:     
   EnvironmentToInstanceType:
     development:
       InstanceType: t2.micro
@@ -56,7 +56,7 @@ Resources:
         - IpProtocol: tcp
           FromPort: '22'
           ToPort: '22'
-          CidrIp: !Ref SSHLocation
+          CidrIp: !Ref PubilcIPRange
         - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
@@ -89,18 +89,18 @@ Resources:
         - IpProtocol: tcp
           FromPort: 22
           ToPort: 22
-          CidrIp: !Ref TCPLocation
+          CidrIp: !Ref JumpboxCIDR
         - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
-          CidrIp: !Ref TCPLocation
+          CidrIp: !Ref JumpboxCIDR
       SecurityGroupEgress:
         - IpProtocol: tcp
           FromPort: 22
           ToPort: 22
-          CidrIp: !Ref TCPLocation
+          CidrIp: !Ref JumpboxCIDR
 
-  Privatesecuritygroup1:   #security group for ec2 instances       
+  Privatesecuritygroup1:   #security group for privatesubnet1 ec2      
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
       VpcId: 
@@ -110,16 +110,16 @@ Resources:
         - IpProtocol: tcp
           FromPort: '22'
           ToPort: '22'
-          CidrIp: !Ref TCPLocation
+          CidrIp: !Ref JumpboxCIDR
         - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
-          CidrIp: !Ref TCPLocation
+          CidrIp: !Ref JumpboxCIDR
       SecurityGroupEgress:
         - IpProtocol: tcp
           FromPort: 22
           ToPort: 22
-          CidrIp: !Ref TCPLocation
+          CidrIp: !Ref JumpboxCIDR
  
   Publicsecuritygroup1:   #security group for ec2 instances       
     Type: 'AWS::EC2::SecurityGroup'
@@ -131,16 +131,16 @@ Resources:
         - IpProtocol: tcp
           FromPort: '22'
           ToPort: '22'
-          CidrIp: !Ref TCPLocation
+          CidrIp: !Ref JumpboxCIDR
         - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
-          CidrIp: !Ref TCPLocation
+          CidrIp: !Ref JumpboxCIDR
       SecurityGroupEgress:
         - IpProtocol: tcp
           FromPort: 22
           ToPort: 22
-          CidrIp: !Ref TCPLocation
+          CidrIp: !Ref JumpboxCIDR
           
   Jumbbox:            #jumbbox instance
     Type: 'AWS::EC2::Instance'
